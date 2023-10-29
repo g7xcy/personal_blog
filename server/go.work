@@ -1,0 +1,9 @@
+go 1.21.3
+
+use (
+	./auth
+	./blog
+	./main
+	./model
+	./util
+)
