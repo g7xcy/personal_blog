@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -9,8 +10,25 @@ import (
 	"example.com/blog"
 	"example.com/model"
 	"example.com/util"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 )
+
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session := sessions.Default(c)
+		user := session.Get("user")
+
+		if user == nil {
+			c.Redirect(http.StatusSeeOther, "/login")
+			c.Abort()
+			return
+		}
+		c.Set("user", user)
+		c.Next()
+	}
+}
 
 func health(c *gin.Context) {
 	DBErr := model.HealthCheck()
@@ -35,6 +53,9 @@ func registerUser(c *gin.Context) {
 		c.JSON(http.StatusServiceUnavailable, err.Error())
 		return
 	} else {
+		session := sessions.Default(c)
+		session.Set("user", userID)
+		session.Save()
 		c.JSON(http.StatusOK, userID)
 	}
 }
@@ -50,6 +71,9 @@ func login(c *gin.Context) {
 		c.JSON(http.StatusServiceUnavailable, err.Error())
 		return
 	} else {
+		session := sessions.Default(c)
+		session.Set("user", user.User_id)
+		session.Save()
 		c.JSON(http.StatusOK, user)
 	}
 }
@@ -92,12 +116,22 @@ func getBlogsByUser(c *gin.Context) {
 }
 
 func postBlog(c *gin.Context) {
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusServiceUnavailable, fmt.Errorf("user not login"))
+		return
+	}
+	userID, ok := user.(int64)
+	if !ok {
+		c.JSON(http.StatusServiceUnavailable, fmt.Errorf("server internal error"))
+		return
+	}
 	var newBlog model.Blog
 	if err := c.BindJSON(&newBlog); err != nil {
 		c.JSON(http.StatusServiceUnavailable, err.Error())
 		return
 	}
-	blogID, err := blog.AddBlog(&newBlog)
+	blogID, err := blog.AddBlog(&newBlog, &userID)
 	if err != nil {
 		c.JSON(http.StatusServiceUnavailable, err.Error())
 		return
@@ -116,6 +150,10 @@ func main() {
 		return
 	}
 	router := gin.Default()
+	// set up session
+	sessionStore := cookie.NewStore([]byte(util.Env["SESSION_SECRET"]))
+	router.Use(sessions.Sessions("blogsession", sessionStore))
+
 	router.GET("/", home)
 	router.GET("/health", health)
 
@@ -125,7 +163,7 @@ func main() {
 	router.GET("/blogs/", getBlogs)
 	router.GET("/blog/id/:id", getBlogsByID)
 	router.GET("/blog/user/:user", getBlogsByUser)
-	router.POST("/blog", postBlog)
+	router.POST("/blog", AuthMiddleware(), postBlog)
 
 	router.Run(util.Env["URL"] + ":" + util.Env["PORT"])
 	defer model.DB.Close()

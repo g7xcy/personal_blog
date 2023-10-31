@@ -104,9 +104,9 @@ func BlogsByID(id int64) (model.Blog, error) {
 	return blog, nil
 }
 
-func AddBlog(blog *model.Blog) (int64, error) {
+func AddBlog(blog *model.Blog, userID *int64) (int64, error) {
 	var newID int64
-	err := model.DB.QueryRow(context.Background(), "SELECT blog_id FROM blogs WHERE title = $1 AND user_id = $2", blog.Title, blog.User_id).Scan(&newID)
+	err := model.DB.QueryRow(context.Background(), "SELECT blog_id FROM blogs WHERE title = $1 AND user_id = $2", blog.Title, userID).Scan(&newID)
 	if err == nil {
 		return 0, fmt.Errorf("addBlog %+v: Blog already exists", blog)
 	}

@@ -15,13 +15,14 @@ func LoadEnv() error {
 		return err
 	}
 	Env = map[string]string{
-		"DB_USER": "",
-		"DB_PWD":  "",
-		"DB_URL":  "",
-		"DB_PORT": "",
-		"DB":      "",
-		"PORT":    "",
-		"URL":     "",
+		"DB_USER":        "",
+		"DB_PWD":         "",
+		"DB_URL":         "",
+		"DB_PORT":        "",
+		"DB":             "",
+		"PORT":           "",
+		"URL":            "",
+		"SESSION_SECRET": "",
 	}
 
 	for k := range Env {
