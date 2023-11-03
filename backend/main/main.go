@@ -10,6 +10,7 @@ import (
 	"example.com/blog"
 	"example.com/model"
 	"example.com/util"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
@@ -153,12 +154,13 @@ func main() {
 	// set up session
 	sessionStore := cookie.NewStore([]byte(util.Env["SESSION_SECRET"]))
 	router.Use(sessions.Sessions("blogsession", sessionStore))
+	router.Use(cors.Default())
 
 	router.GET("/", home)
 	router.GET("/health", health)
 
 	router.POST("/register", registerUser)
-	router.GET("/login", login)
+	router.POST("/login", login)
 
 	router.GET("/blogs/", getBlogs)
 	router.GET("/blog/id/:id", getBlogsByID)
